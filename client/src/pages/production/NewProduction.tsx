@@ -4,8 +4,9 @@ import { Alert, Button, DatePicker, Input, InputNumber, Steps } from 'antd'
 import { ArrowLeftOutlined, ArrowRightOutlined, CheckOutlined, CheckCircleFilled } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import { PageHeader } from '../../components/ui'
+import { useScope } from '../../context/useScope'
 import SavedResult from '../../components/SavedResult'
-import { factories, production, TODAY } from '../../data/seed'
+import { production, TODAY } from '../../data/seed'
 import { factoryById, materialName, outputStockLine, rawStockLine, warehouseById } from '../../data/selectors'
 import { seriesColors } from '../../theme/theme'
 import { formatDate, formatKg } from '../../utils/format'
@@ -18,6 +19,8 @@ const kgInput = {
 
 export default function NewProduction() {
   const navigate = useNavigate()
+  // Operators record only for their own factory, using material from their own warehouses.
+  const { factories, hasWarehouse } = useScope()
   const [step, setStep] = useState(0)
   const [factoryId, setFactoryId] = useState<string>()
   const [date, setDate] = useState<Dayjs>(dayjs(TODAY))
@@ -141,7 +144,7 @@ export default function NewProduction() {
                   </div>
                   <h3 style={{ fontSize: 16 }}>{f.name}</h3>
                   <p style={{ fontSize: 13 }}>
-                    {f.city} · gets material from {f.suppliedBy.map((w) => warehouseById(w).name).join(', ')}
+                    {f.city} · gets material from {f.suppliedBy.filter(hasWarehouse).map((w) => warehouseById(w).name).join(', ')}
                   </p>
                 </div>
               ))}
@@ -159,7 +162,7 @@ export default function NewProduction() {
             <p className="muted" style={{ marginTop: 0 }}>
               Pick the warehouse and tyre type it came from. This amount will be taken out of that warehouse's stock.
             </p>
-            {factory.suppliedBy.map((wid) => {
+            {factory.suppliedBy.filter(hasWarehouse).map((wid) => {
               const w = warehouseById(wid)
               return (
                 <div key={wid} style={{ marginTop: 18 }}>

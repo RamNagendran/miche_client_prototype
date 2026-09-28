@@ -1,19 +1,21 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Button, DatePicker, Form, Input, InputNumber, Select } from 'antd'
 import { ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { PageHeader } from '../../components/ui'
+import { useScope } from '../../context/useScope'
 import DocumentIntake, { type IntakeStep } from '../../components/DocumentIntake'
 import SavedResult from '../../components/SavedResult'
 import type { ReviewResult } from '../../components/ExtractionReview'
 import { docForQueued, samplePurchaseDoc } from '../../data/extraction'
-import { materials, purchases, suppliers, TODAY, warehouses } from '../../data/seed'
+import { materials, purchases, suppliers, TODAY } from '../../data/seed'
 import { materialName, rawStockLine, supplierById, warehouseById } from '../../data/selectors'
 import { formatDate, formatINR, formatKg } from '../../utils/format'
 import type { MaterialId } from '../../data/types'
 
 function ManualPurchaseForm({ onSaved, back }: { onSaved: (r: ReviewResult) => void; back: () => void }) {
+  const { warehouses } = useScope()
   const [form] = Form.useForm()
   const qty = Form.useWatch('qtyKg', form) ?? 0
   const rate = Form.useWatch('rate', form) ?? 0
@@ -144,9 +146,13 @@ function ManualPurchaseForm({ onSaved, back }: { onSaved: (r: ReviewResult) => v
 export default function NewPurchase() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const queued = id ? purchases.find((p) => p.id === id && p.status === 'review') : undefined
+  const { hasWarehouse } = useScope()
+  const queued = id ? purchases.find((p) => p.id === id && p.status === 'review' && hasWarehouse(p.warehouseId)) : undefined
   const [step, setStep] = useState<IntakeStep>(queued ? 'review' : 'choose')
   const nextId = `PUR-2026-0${Number(purchases[purchases.length - 1].id.slice(-3)) + 1}`
+
+  // A bill for another site (or one already checked) cannot be opened from a link.
+  if (id && !queued) return <Navigate to="/purchases?tab=review" replace />
 
   return (
     <div className="page">

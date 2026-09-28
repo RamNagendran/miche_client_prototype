@@ -1,40 +1,48 @@
 import { useNavigate } from 'react-router-dom'
 import { Table } from 'antd'
 import { useApp } from '../../context/AppContext'
+import { useScope } from '../../context/useScope'
 import { PageHeader, SectionTitle } from '../../components/ui'
 import { CompanyRawCard, WarehouseCard } from '../../components/LocationCards'
 import { factoryById, periodLabels, rawStockLine, warehouseTotals } from '../../data/selectors'
-import { materials, warehouses } from '../../data/seed'
+import { materials } from '../../data/seed'
 import { seriesColors } from '../../theme/theme'
 import { formatINRShort, formatKg } from '../../utils/format'
 
 export default function WarehousesOverview() {
   const { period } = useApp()
   const navigate = useNavigate()
+  // Operators see only their own warehouses, and no company-wide total.
+  const { warehouses, everything } = useScope()
 
-  const matrix = materials.map((m) => {
-    const row: Record<string, number | string> = { key: m.id, name: m.name, color: seriesColors[m.id] }
-    let total = 0
-    warehouses.forEach((w) => {
-      const v = w.materials.includes(m.id) ? rawStockLine(w.id, m.id).current : 0
-      row[w.id] = v
-      total += v
+  const matrix = materials
+    .filter((m) => warehouses.some((w) => w.materials.includes(m.id)))
+    .map((m) => {
+      const row: Record<string, number | string> = { key: m.id, name: m.name, color: seriesColors[m.id] }
+      let total = 0
+      warehouses.forEach((w) => {
+        const v = w.materials.includes(m.id) ? rawStockLine(w.id, m.id).current : 0
+        row[w.id] = v
+        total += v
+      })
+      row.total = total
+      return row
     })
-    row.total = total
-    return row
-  })
   const totalRow: Record<string, number | string> = { key: 'total', name: 'All tyre types', color: '#191919' }
   ;[...warehouses.map((w) => w.id), 'total'].forEach((k) => (totalRow[k] = matrix.reduce((s, r) => s + Number(r[k]), 0)))
 
   return (
     <div className="page">
-      <PageHeader title="Warehouses" subtitle="Raw material in each warehouse right now. Every warehouse keeps its own stock." />
+      <PageHeader
+        title="Warehouses"
+        subtitle={everything ? 'Raw material in each warehouse right now. Every warehouse keeps its own stock.' : 'Raw material in your warehouse right now.'}
+      />
 
       <div className="grid grid-4">
         {warehouses.map((w) => (
           <WarehouseCard key={w.id} id={w.id} />
         ))}
-        <CompanyRawCard />
+        {everything && <CompanyRawCard />}
       </div>
 
       <SectionTitle title="Stock by tyre type" hint="kg in stock right now" />
@@ -68,16 +76,21 @@ export default function WarehousesOverview() {
                   <span className="faint">—</span>
                 ),
             })),
-            {
-              title: 'Company total',
-              dataIndex: 'total',
-              align: 'right' as const,
-              render: (v: number) => (
-                <span className="num strong" style={{ fontWeight: 800 }}>
-                  {formatKg(v)}
-                </span>
-              ),
-            },
+            // With a single warehouse, a total column would only repeat it.
+            ...(warehouses.length > 1
+              ? [
+                  {
+                    title: everything ? 'Company total' : 'Total',
+                    dataIndex: 'total',
+                    align: 'right' as const,
+                    render: (v: number) => (
+                      <span className="num strong" style={{ fontWeight: 800 }}>
+                        {formatKg(v)}
+                      </span>
+                    ),
+                  },
+                ]
+              : []),
           ]}
         />
       </div>

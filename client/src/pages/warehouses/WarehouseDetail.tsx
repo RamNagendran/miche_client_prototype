@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Button, Segmented, Table, Tabs } from 'antd'
 import { ArrowLeftOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons'
 import { can, useApp } from '../../context/AppContext'
+import { useScope } from '../../context/useScope'
 import { Formula, MaterialTag, PageHeader, Qty, SectionTitle, StockBar } from '../../components/ui'
 import { confirmedPurchases, factoryById, materialName, purchaseValue, supplierById, warehouseLedger, warehouseStock, type LedgerRow } from '../../data/selectors'
 import { production, warehouses } from '../../data/seed'
@@ -14,7 +15,9 @@ export default function WarehouseDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { role } = useApp()
-  const wh = warehouses.find((w) => w.id === id)
+  const { hasWarehouse } = useScope()
+  // An operator opening another site's warehouse by link is sent back to their own list.
+  const wh = warehouses.find((w) => w.id === id && hasWarehouse(w.id))
   const [mat, setMat] = useState<MaterialId>(wh?.materials[0] ?? 'truck')
   const stock = wh ? warehouseStock(wh.id) : null
 

@@ -15,7 +15,8 @@ const roleTag: Record<Role, { label: string; color: string }> = {
 
 const permissions: [string, boolean, boolean, boolean][] = [
   ['See the dashboard and company totals', true, true, false],
-  ['See warehouse and factory stock', true, true, true],
+  ['See stock and entries for every location', true, true, false],
+  ['See stock and entries for their assigned sites only', false, false, true],
   ['Record purchases, production and sales', false, true, true],
   ['Check and confirm uploaded bills', false, true, true],
   ['Edit or cancel a saved record', false, true, false],

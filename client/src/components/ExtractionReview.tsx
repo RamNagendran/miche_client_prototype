@@ -14,9 +14,10 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import InvoiceDocument from './InvoiceDocument'
+import { useScope } from '../context/useScope'
 import { XField } from './ReviewField'
 import { correctTotal, gstinLooksValid, isDuplicateInvoice, type DocField, type ExtractedDoc } from '../data/extraction'
-import { buyers, factories, materials, outputs, suppliers, TODAY, warehouses } from '../data/seed'
+import { buyers, factories, materials, outputs, suppliers, TODAY } from '../data/seed'
 import { outputStockLine, rawStockLine } from '../data/selectors'
 import { formatINR, formatKg } from '../utils/format'
 import type { MaterialId, OutputId } from '../data/types'
@@ -44,6 +45,7 @@ export default function ExtractionReview({
   onDiscard: () => void
 }) {
   const isPurchase = doc.kind === 'purchase'
+  const scope = useScope()
   const perKg = doc.unitOnBill === 'MT'
   const [active, setActive] = useState<DocField | null>(null)
   const [zoom, setZoom] = useState(1)
@@ -153,7 +155,8 @@ export default function ExtractionReview({
 
   const result = (): ReviewResult => ({ partyId, invoiceNo, date, item, qtyKg, rate, total, locationId })
 
-  const locations = isPurchase ? warehouses : factories
+  // Only the sites this person is assigned to can receive the purchase or make the sale.
+  const locations = isPurchase ? scope.warehouses : scope.factories
   const stockNow = locationId && item ? (isPurchase ? rawStockLine(locationId, item as MaterialId).current : outputStockLine(locationId, item as OutputId).current) : null
 
   return (

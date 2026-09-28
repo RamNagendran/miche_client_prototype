@@ -4,16 +4,18 @@ import { ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import { PageHeader } from '../../components/ui'
+import { useScope } from '../../context/useScope'
 import DocumentIntake, { type IntakeStep } from '../../components/DocumentIntake'
 import SavedResult from '../../components/SavedResult'
 import type { ReviewResult } from '../../components/ExtractionReview'
 import { sampleSaleDoc } from '../../data/extraction'
-import { buyers, factories, outputs, sales, TODAY } from '../../data/seed'
+import { buyers, outputs, sales, TODAY } from '../../data/seed'
 import { buyerById, factoryById, outputName, outputStockLine } from '../../data/selectors'
 import { formatDate, formatINR, formatKg } from '../../utils/format'
 import type { OutputId } from '../../data/types'
 
 function ManualSaleForm({ onSaved, back }: { onSaved: (r: ReviewResult) => void; back: () => void }) {
+  const { factories } = useScope()
   const [form] = Form.useForm()
   const qty = Form.useWatch('qtyKg', form) ?? 0
   const rate = Form.useWatch('rate', form) ?? 0

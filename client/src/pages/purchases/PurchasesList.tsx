@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Badge, Button, DatePicker, Drawer, Input, Select, Table, Tabs } from 'antd'
 import { DownloadOutlined, PlusOutlined, SearchOutlined, RightOutlined, EyeOutlined, ClockCircleFilled } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { Dayjs } from 'dayjs'
 import { can, useApp } from '../../context/AppContext'
+import { useScope } from '../../context/useScope'
 import { MaterialTag, PageHeader, Qty, SourceTag, StatusTag } from '../../components/ui'
 import InvoiceDocument from '../../components/InvoiceDocument'
 import { docForQueued } from '../../data/extraction'
-import { materials, purchases, suppliers, warehouses } from '../../data/seed'
+import { materials, purchases, suppliers } from '../../data/seed'
 import { confirmedPurchases, purchaseValue, reviewPurchases, supplierById, warehouseById, materialName } from '../../data/selectors'
 import { formatDate, formatINR, formatINRShort, formatKg, formatRate, formatTonnes } from '../../utils/format'
 import type { Purchase } from '../../data/types'
@@ -25,24 +26,26 @@ export default function PurchasesList() {
   const [range, setRange] = useState<[Dayjs | null, Dayjs | null] | null>(null)
   const [open, setOpen] = useState<Purchase | null>(null)
 
-  const rows = useMemo(
-    () =>
-      [...purchases]
-        .reverse()
-        .filter((p) => (tab === 'review' ? p.status === 'review' : true))
-        .filter((p) => !wh || p.warehouseId === wh)
-        .filter((p) => !mat || p.material === mat)
-        .filter((p) => !range?.[0] || !range?.[1] || (p.date >= range[0].format('YYYY-MM-DD') && p.date <= range[1].format('YYYY-MM-DD')))
-        .filter((p) => {
-          if (!q) return true
-          const s = `${p.id} ${p.invoiceNo} ${supplierById(p.supplierId).name}`.toLowerCase()
-          return s.includes(q.toLowerCase())
-        }),
-    [tab, wh, mat, range, q],
-  )
+  const scope = useScope()
+  // Operators only see bills for the warehouses assigned to them.
+  const visible = purchases.filter((p) => scope.hasWarehouse(p.warehouseId))
+  const myConfirmed = confirmedPurchases.filter((p) => scope.hasWarehouse(p.warehouseId))
+  const myReview = reviewPurchases.filter((p) => scope.hasWarehouse(p.warehouseId))
 
-  const kg = confirmedPurchases.reduce((s, p) => s + p.qtyKg, 0)
-  const spend = confirmedPurchases.reduce((s, p) => s + purchaseValue(p), 0)
+  const rows = [...visible]
+    .reverse()
+    .filter((p) => (tab === 'review' ? p.status === 'review' : true))
+    .filter((p) => !wh || p.warehouseId === wh)
+    .filter((p) => !mat || p.material === mat)
+    .filter((p) => !range?.[0] || !range?.[1] || (p.date >= range[0].format('YYYY-MM-DD') && p.date <= range[1].format('YYYY-MM-DD')))
+    .filter((p) => {
+      if (!q) return true
+      const s = `${p.id} ${p.invoiceNo} ${supplierById(p.supplierId).name}`.toLowerCase()
+      return s.includes(q.toLowerCase())
+    })
+
+  const kg = myConfirmed.reduce((s, p) => s + p.qtyKg, 0)
+  const spend = myConfirmed.reduce((s, p) => s + purchaseValue(p), 0)
 
   const columns: ColumnsType<Purchase> = [
     {
@@ -138,10 +141,10 @@ export default function PurchasesList() {
 
       <div className="grid grid-4" style={{ marginBottom: 20 }}>
         {[
-          ['Bills this year', `${confirmedPurchases.length}`, 'confirmed purchases'],
+          ['Bills this year', `${myConfirmed.length}`, 'confirmed purchases'],
           ['Raw material bought', formatTonnes(kg), formatKg(kg)],
           ['Total spent', formatINRShort(spend), 'before GST'],
-          ['Waiting for review', `${reviewPurchases.length} bills`, 'not in stock yet'],
+          ['Waiting for review', `${myReview.length} ${myReview.length === 1 ? 'bill' : 'bills'}`, 'not in stock yet'],
         ].map(([l, v, s]) => (
           <div key={l} className="surface" style={{ padding: '16px 20px' }}>
             <div className="muted" style={{ fontWeight: 700, fontSize: 13 }}>
@@ -157,13 +160,15 @@ export default function PurchasesList() {
         ))}
       </div>
 
-      {reviewPurchases.length > 0 && tab === 'all' && perms.enterData && (
+      {myReview.length > 0 && tab === 'all' && perms.enterData && (
         <div className="surface fade-in" style={{ padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, borderColor: '#f3d9a4', background: '#fffbf2' }}>
           <span className="kpi-icon" style={{ background: '#fff0d1', color: '#d98a0b', width: 38, height: 38 }}>
             <ClockCircleFilled />
           </span>
           <div style={{ flex: 1 }}>
-            <div className="strong">{reviewPurchases.length} uploaded bills are waiting for someone to check them</div>
+            <div className="strong">
+              {myReview.length === 1 ? '1 uploaded bill is' : `${myReview.length} uploaded bills are`} waiting for someone to check
+            </div>
             <div className="muted" style={{ fontSize: 13 }}>
               They are not counted in stock or spend until confirmed.
             </div>
@@ -180,12 +185,12 @@ export default function PurchasesList() {
             activeKey={tab}
             onChange={(k) => setParams(k === 'review' ? { tab: 'review' } : {})}
             items={[
-              { key: 'all', label: `All purchases (${purchases.length})` },
+              { key: 'all', label: `All purchases (${visible.length})` },
               {
                 key: 'review',
                 label: (
                   <span>
-                    Needs review <Badge count={reviewPurchases.length} color="#d98a0b" style={{ marginLeft: 4 }} />
+                    Needs review <Badge count={myReview.length} color="#d98a0b" style={{ marginLeft: 4 }} />
                   </span>
                 ),
               },
@@ -194,7 +199,7 @@ export default function PurchasesList() {
         </div>
         <div style={{ display: 'flex', gap: 10, padding: '4px 20px 16px', flexWrap: 'wrap' }}>
           <Input prefix={<SearchOutlined className="faint" />} placeholder="Search supplier, bill number or ID" style={{ width: 300 }} allowClear value={q} onChange={(e) => setQ(e.target.value)} />
-          <Select allowClear placeholder="All warehouses" style={{ width: 180 }} value={wh} onChange={setWh} options={warehouses.map((w) => ({ value: w.id, label: w.name }))} />
+          <Select allowClear placeholder="All warehouses" style={{ width: 180 }} value={wh} onChange={setWh} options={scope.warehouses.map((w) => ({ value: w.id, label: w.name }))} />
           <Select allowClear placeholder="All tyre types" style={{ width: 180 }} value={mat} onChange={setMat} options={materials.map((m) => ({ value: m.id, label: m.name }))} />
           <DatePicker.RangePicker format="DD MMM" value={range} onChange={(v) => setRange(v)} />
           <div style={{ flex: 1 }} />

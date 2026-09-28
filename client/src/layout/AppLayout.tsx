@@ -22,6 +22,7 @@ import {
   FileTextFilled,
 } from '@ant-design/icons'
 import { can, useApp } from '../context/AppContext'
+import { useScope } from '../context/useScope'
 import { MichyMark } from '../components/ui'
 import { users } from '../data/seed'
 import { periodLabels, periodSubtitle, reviewPurchases, type Period } from '../data/selectors'
@@ -51,6 +52,8 @@ const titles: [string, string][] = [
 export default function AppLayout() {
   const { user, role, login, logout, period, setPeriod } = useApp()
   const perms = can(role)
+  const { hasWarehouse } = useScope()
+  const myReview = reviewPurchases.filter((p) => hasWarehouse(p.warehouseId))
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [collapsed, setCollapsed] = useState(false)
@@ -100,19 +103,23 @@ export default function AppLayout() {
   const notifications = (
     <div style={{ width: 340 }}>
       <div style={{ fontWeight: 800, fontSize: 15, padding: '4px 4px 10px' }}>Notifications</div>
-      {reviewPurchases.length > 0 && (
+      {myReview.length > 0 ? (
         <div className="qa-row" onClick={() => navigate('/purchases?tab=review')}>
           <span className="kpi-icon" style={{ background: '#f4efff', color: '#6941c6' }}>
             <FileTextFilled />
           </span>
           <div style={{ flex: 1 }}>
             <div className="strong" style={{ fontSize: 13.5 }}>
-              {reviewPurchases.length} purchase bills waiting for review
+              {myReview.length} purchase {myReview.length === 1 ? 'bill' : 'bills'} waiting for review
             </div>
             <div className="faint" style={{ fontSize: 12.5 }}>
               Not added to stock until someone confirms
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="faint" style={{ padding: '8px 4px 4px', fontSize: 13.5 }}>
+          Nothing needs your attention right now.
         </div>
       )}
     </div>
@@ -232,7 +239,7 @@ export default function AppLayout() {
               <Button shape="circle" size="large" icon={<FileSearchOutlined />} onClick={() => navigate(perms.viewRecords ? '/records' : '/purchases')} />
             </Tooltip>
             <Popover content={notifications} trigger="click" placement="bottomRight">
-              <Badge count={reviewPurchases.length} size="small" offset={[-4, 4]}>
+              <Badge count={myReview.length} size="small" offset={[-4, 4]}>
                 <Button shape="circle" size="large" icon={<BellOutlined />} />
               </Badge>
             </Popover>

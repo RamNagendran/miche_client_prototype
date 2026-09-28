@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Input, Segmented, Select, Table } from 'antd'
 import { DownloadOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { can, useApp } from '../../context/AppContext'
+import { useScope } from '../../context/useScope'
 import { MaterialTag, PageHeader } from '../../components/ui'
-import { factories, production, warehouses } from '../../data/seed'
+import { production } from '../../data/seed'
 import { factoryById, productionOutputKg, warehouseById } from '../../data/selectors'
 import { formatDate, formatKg, formatTonnes } from '../../utils/format'
 import type { Production } from '../../data/types'
@@ -17,15 +18,14 @@ export default function ProductionList() {
   const [wh, setWh] = useState<string>()
   const [q, setQ] = useState('')
 
-  const rows = useMemo(
-    () =>
-      [...production]
-        .reverse()
-        .filter((p) => factory === 'all' || p.factoryId === factory)
-        .filter((p) => !wh || p.warehouseId === wh)
-        .filter((p) => !q || p.id.toLowerCase().includes(q.toLowerCase())),
-    [factory, wh, q],
-  )
+  const scope = useScope()
+  // Operators only see production at their factories, or material taken from their warehouses.
+  const rows = [...production]
+    .reverse()
+    .filter((p) => scope.hasFactory(p.factoryId) || scope.hasWarehouse(p.warehouseId))
+    .filter((p) => factory === 'all' || p.factoryId === factory)
+    .filter((p) => !wh || p.warehouseId === wh)
+    .filter((p) => !q || p.id.toLowerCase().includes(q.toLowerCase()))
   const input = rows.reduce((s, p) => s + p.inputKg, 0)
   const rubber = rows.reduce((s, p) => s + p.outputs.rubber, 0)
   const steel = rows.reduce((s, p) => s + p.outputs.steel, 0)
@@ -100,8 +100,8 @@ export default function ProductionList() {
 
       <div className="surface table-card">
         <div style={{ display: 'flex', gap: 10, padding: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Segmented value={factory} onChange={(v) => setFactory(String(v))} options={[{ value: 'all', label: 'All factories' }, ...factories.map((f) => ({ value: f.id, label: f.name }))]} />
-          <Select allowClear placeholder="Any warehouse" style={{ width: 180 }} value={wh} onChange={setWh} options={warehouses.map((w) => ({ value: w.id, label: w.name }))} />
+          <Segmented value={factory} onChange={(v) => setFactory(String(v))} options={[{ value: 'all', label: 'All factories' }, ...scope.factories.map((f) => ({ value: f.id, label: f.name }))]} />
+          <Select allowClear placeholder="Any warehouse" style={{ width: 180 }} value={wh} onChange={setWh} options={scope.warehouses.map((w) => ({ value: w.id, label: w.name }))} />
           <Input prefix={<SearchOutlined className="faint" />} placeholder="Search entry ID" style={{ width: 220 }} allowClear value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <Table scroll={{ x: 'max-content' }} rowKey="id" columns={columns} dataSource={rows} pagination={{ pageSize: 12, showSizeChanger: false }} />

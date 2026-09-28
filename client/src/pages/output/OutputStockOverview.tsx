@@ -1,15 +1,27 @@
 import { Table } from 'antd'
 import { useApp } from '../../context/AppContext'
+import { useScope } from '../../context/useScope'
 import { Formula, PageHeader, SectionTitle } from '../../components/ui'
 import { CompanyOutputCard, FactoryCard } from '../../components/LocationCards'
-import { companyOutputStock, outputName, outputStockLine } from '../../data/selectors'
-import { factories, outputs } from '../../data/seed'
+import { outputName, outputStockLine } from '../../data/selectors'
+import { outputs } from '../../data/seed'
 import { seriesColors } from '../../theme/theme'
 import { formatKg } from '../../utils/format'
 
 export default function OutputStockOverview() {
   const { period } = useApp()
-  const company = companyOutputStock()
+  // Operators see only their own factories; the worked calculation then covers just those.
+  const { factories, everything } = useScope()
+  const company = outputs.map((o) => ({
+    product: o.id,
+    ...factories.reduce(
+      (acc, f) => {
+        const l = outputStockLine(f.id, o.id)
+        return { opening: acc.opening + l.opening, in: acc.in + l.in, out: acc.out + l.out, current: acc.current + l.current }
+      },
+      { opening: 0, in: 0, out: 0, current: 0 },
+    ),
+  }))
 
   const rows = factories.flatMap((f) =>
     outputs.map((o) => ({ key: `${f.id}-${o.id}`, factory: f.name, first: o.id === 'rubber', product: o.id, ...outputStockLine(f.id, o.id) })),
@@ -17,16 +29,16 @@ export default function OutputStockOverview() {
 
   return (
     <div className="page">
-      <PageHeader title="Output stock" subtitle="Rubber, steel and other output at each factory, ready to sell." />
+      <PageHeader title="Output stock" subtitle={everything ? 'Rubber, steel and other output at each factory, ready to sell.' : 'Rubber, steel and other output at your factory, ready to sell.'} />
 
       <div className="grid grid-4">
         {factories.map((f) => (
           <FactoryCard key={f.id} id={f.id} period={period} />
         ))}
-        <CompanyOutputCard period={period} />
+        {everything && <CompanyOutputCard period={period} />}
       </div>
 
-      <SectionTitle title="How available stock is worked out" hint="Company-wide, since 1 April 2026" />
+      <SectionTitle title="How available stock is worked out" hint={`${everything ? 'Company-wide' : factories.map((f) => f.name).join(', ')}, since 1 April 2026`} />
       <div className="grid" style={{ gap: 12 }}>
         {company
           .filter((c) => c.product !== 'other')

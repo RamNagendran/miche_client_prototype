@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Button, Segmented, Table, Tabs } from 'antd'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons'
 import { can, useApp } from '../../context/AppContext'
+import { useScope } from '../../context/useScope'
 import { Formula, MaterialTag, PageHeader, ProductTag, SectionTitle, StatusTag } from '../../components/ui'
 import { buyerById, factoryOutputStock, factoryTotals, outputName, periodLabels, saleValue, warehouseById } from '../../data/selectors'
 import { factories, production, sales } from '../../data/seed'
@@ -14,8 +15,10 @@ export default function FactoryDetail() {
   const navigate = useNavigate()
   const { role, period } = useApp()
   const [product, setProduct] = useState<OutputId>('rubber')
+  const { hasFactory } = useScope()
   const f = factories.find((x) => x.id === id)
-  if (!f) return <Navigate to="/output-stock" replace />
+  // An operator opening another site's factory by link is sent back to their own list.
+  if (!f || !hasFactory(f.id)) return <Navigate to="/output-stock" replace />
 
   const stock = factoryOutputStock(f.id)
   const t = factoryTotals(f.id, period)

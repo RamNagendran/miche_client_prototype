@@ -3,6 +3,7 @@ import { Button, Table, Tag } from 'antd'
 import { ExperimentOutlined, ShopOutlined, ShoppingCartOutlined, ArrowRightOutlined, ClockCircleFilled, FileTextFilled } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useApp } from '../context/AppContext'
+import { useScope } from '../context/useScope'
 import { PageHeader, SectionTitle, StatusTag } from '../components/ui'
 import { WarehouseCard } from '../components/LocationCards'
 import { allRecords, reviewPurchases, supplierById, warehouseById, outputStockLine } from '../data/selectors'
@@ -18,6 +19,7 @@ const tiles = [
 export default function OperatorHome() {
   const { user } = useApp()
   const navigate = useNavigate()
+  const scope = useScope()
   const sites = user?.locations ?? []
   const mine = allRecords().filter((r) => r.locationIds.some((l) => sites.includes(l))).slice(0, 6)
   const myQueue = reviewPurchases.filter((p) => sites.includes(p.warehouseId))
@@ -102,18 +104,22 @@ export default function OperatorHome() {
         <div>
           <SectionTitle title="My sites" hint="stock right now" />
           <div style={{ display: 'grid', gap: 16 }}>
-            <WarehouseCard id={user?.id === 'U3' ? 'WA' : 'WB'} />
-            <div className="surface" style={{ padding: 18 }}>
-              <div className="strong" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ClockCircleFilled style={{ color: '#D82E54' }} /> {user?.id === 'U3' ? 'Factory A' : 'Factory B'} · ready to sell
-              </div>
-              {(['rubber', 'steel', 'other'] as const).map((o) => (
-                <div className="mat-row" key={o}>
-                  <span style={{ textTransform: 'capitalize' }}>{o}</span>
-                  <b className="num">{formatKg(outputStockLine(user?.id === 'U3' ? 'FA' : 'FB', o).current)}</b>
+            {scope.warehouses.map((w) => (
+              <WarehouseCard key={w.id} id={w.id} />
+            ))}
+            {scope.factories.map((f) => (
+              <div key={f.id} className="surface" style={{ padding: 18 }}>
+                <div className="strong" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ClockCircleFilled style={{ color: '#D82E54' }} /> {f.name} · ready to sell
                 </div>
-              ))}
-            </div>
+                {(['rubber', 'steel', 'other'] as const).map((o) => (
+                  <div className="mat-row" key={o}>
+                    <span style={{ textTransform: 'capitalize' }}>{o}</span>
+                    <b className="num">{formatKg(outputStockLine(f.id, o).current)}</b>
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, DatePicker, Drawer, Input, Segmented, Select, Table } from 'antd'
 import { DownloadOutlined, PlusOutlined, SearchOutlined, FilePdfFilled } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { Dayjs } from 'dayjs'
 import { can, useApp } from '../../context/AppContext'
+import { useScope } from '../../context/useScope'
 import { PageHeader, ProductTag, Qty, SourceTag, StatusTag } from '../../components/ui'
-import { buyers, factories, outputs, sales } from '../../data/seed'
+import { buyers, outputs, sales } from '../../data/seed'
 import { buyerById, confirmedSales, factoryById, outputName, saleValue } from '../../data/selectors'
 import { seriesColors } from '../../theme/theme'
 import { formatDate, formatINR, formatINRShort, formatKg, formatRate, formatTonnes } from '../../utils/format'
@@ -22,20 +23,21 @@ export default function SalesList() {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState<Sale | null>(null)
 
-  const rows = useMemo(
-    () =>
-      [...sales]
-        .reverse()
-        .filter((s) => product === 'all' || s.product === product)
-        .filter((s) => !factory || s.factoryId === factory)
-        .filter((s) => !buyer || s.buyerId === buyer)
-        .filter((s) => !range?.[0] || !range?.[1] || (s.date >= range[0].format('YYYY-MM-DD') && s.date <= range[1].format('YYYY-MM-DD')))
-        .filter((s) => !q || `${s.id} ${s.invoiceNo} ${buyerById(s.buyerId).name}`.toLowerCase().includes(q.toLowerCase())),
-    [product, factory, buyer, range, q],
-  )
+  const scope = useScope()
+  // Operators only see sales from the factories assigned to them.
+  const visible = sales.filter((s) => scope.hasFactory(s.factoryId))
+  const myConfirmed = confirmedSales.filter((s) => scope.hasFactory(s.factoryId))
+
+  const rows = [...visible]
+    .reverse()
+    .filter((s) => product === 'all' || s.product === product)
+    .filter((s) => !factory || s.factoryId === factory)
+    .filter((s) => !buyer || s.buyerId === buyer)
+    .filter((s) => !range?.[0] || !range?.[1] || (s.date >= range[0].format('YYYY-MM-DD') && s.date <= range[1].format('YYYY-MM-DD')))
+    .filter((s) => !q || `${s.id} ${s.invoiceNo} ${buyerById(s.buyerId).name}`.toLowerCase().includes(q.toLowerCase()))
 
   const byProduct = outputs.map((o) => {
-    const list = confirmedSales.filter((s) => s.product === o.id)
+    const list = myConfirmed.filter((s) => s.product === o.id)
     return { id: o.id, kg: list.reduce((s, x) => s + x.qtyKg, 0), value: list.reduce((s, x) => s + saleValue(x), 0) }
   })
   const totalValue = byProduct.reduce((s, p) => s + p.value, 0)
@@ -78,7 +80,7 @@ export default function SalesList() {
             {formatINRShort(totalValue)}
           </div>
           <div className="faint" style={{ fontSize: 12.5 }}>
-            {confirmedSales.length} invoices · before GST
+            {myConfirmed.length} invoices · before GST
           </div>
         </div>
         {byProduct.map((p) => (
@@ -101,7 +103,7 @@ export default function SalesList() {
         <div style={{ display: 'flex', gap: 10, padding: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <Segmented value={product} onChange={(v) => setProduct(String(v))} options={[{ value: 'all', label: 'All products' }, ...outputs.map((o) => ({ value: o.id, label: o.name }))]} />
           <Input prefix={<SearchOutlined className="faint" />} placeholder="Search buyer, invoice or ID" style={{ width: 260 }} allowClear value={q} onChange={(e) => setQ(e.target.value)} />
-          <Select allowClear placeholder="All factories" style={{ width: 160 }} value={factory} onChange={setFactory} options={factories.map((f) => ({ value: f.id, label: f.name }))} />
+          <Select allowClear placeholder="All factories" style={{ width: 160 }} value={factory} onChange={setFactory} options={scope.factories.map((f) => ({ value: f.id, label: f.name }))} />
           <Select allowClear placeholder="All buyers" style={{ width: 200 }} value={buyer} onChange={setBuyer} options={buyers.map((b) => ({ value: b.id, label: b.name }))} />
           <DatePicker.RangePicker format="DD MMM" value={range} onChange={(v) => setRange(v)} />
         </div>
