@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Alert, Button, DatePicker, Input, InputNumber, Modal, Progress, Select, Tag, Tooltip } from 'antd'
+import { Alert, Button, DatePicker, Input, InputNumber, Progress, Select, Tag, Tooltip } from 'antd'
 import {
   CheckOutlined,
   ExclamationOutlined,
@@ -13,7 +13,6 @@ import {
   QrcodeOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { useApp } from '../context/AppContext'
 import InvoiceDocument from './InvoiceDocument'
 import { XField } from './ReviewField'
 import { correctTotal, gstinLooksValid, isDuplicateInvoice, type DocField, type ExtractedDoc } from '../data/extraction'
@@ -31,7 +30,6 @@ export interface ReviewResult {
   rate: number
   total: number
   locationId: string
-  overrideReason?: string
 }
 
 type VerifyKey = 'qty' | 'rate' | 'total' | 'location'
@@ -45,7 +43,6 @@ export default function ExtractionReview({
   onConfirm: (r: ReviewResult) => void
   onDiscard: () => void
 }) {
-  const { role, user } = useApp()
   const isPurchase = doc.kind === 'purchase'
   const perKg = doc.unitOnBill === 'MT'
   const [active, setActive] = useState<DocField | null>(null)
@@ -58,11 +55,7 @@ export default function ExtractionReview({
   const [rate, setRate] = useState(perKg ? +(doc.rateOnBill / 1000).toFixed(2) : doc.rateOnBill)
   const [total, setTotal] = useState(doc.totalRead)
   const [locationId, setLocationId] = useState<string>('')
-  const [wbNo, setWbNo] = useState('')
-  const [wbKg, setWbKg] = useState<number | null>(null)
   const [verified, setVerified] = useState<Record<VerifyKey, boolean>>({ qty: false, rate: false, total: false, location: false })
-  const [overrideOpen, setOverrideOpen] = useState(false)
-  const [reason, setReason] = useState('')
 
   const parties = isPurchase ? suppliers : buyers
   const party = parties.find((p) => p.id === partyId)
@@ -149,18 +142,8 @@ export default function ExtractionReview({
         field: 'qty',
       })
     }
-    if (wbKg) {
-      const diff = Math.abs(wbKg - qtyKg)
-      list.push({
-        key: 'wb',
-        ok: diff / qtyKg <= 0.005,
-        title: 'Weighbridge weight matches the bill',
-        detail: diff === 0 ? 'Exact match' : `Weighbridge ${formatKg(wbKg)} vs bill ${formatKg(qtyKg)} · difference ${formatKg(diff)}`,
-        field: 'qty',
-      })
-    }
     return list
-  }, [amount, doc, qtyKg, rate, total, expectedTotal, tax, party, partyId, invoiceNo, date, item, perKg, isPurchase, locationId, wbKg])
+  }, [amount, doc, qtyKg, rate, total, expectedTotal, tax, party, partyId, invoiceNo, date, item, perKg, isPurchase, locationId])
 
   const issues = checks.filter((c) => !c.ok)
   const verifiedCount = Object.values(verified).filter(Boolean).length
@@ -168,7 +151,7 @@ export default function ExtractionReview({
   const warnFields = issues.map((c) => c.field).filter(Boolean) as DocField[]
   const progress = Math.round(((checks.length - issues.length) / checks.length) * 50 + (verifiedCount / 4) * 50)
 
-  const result = (overrideReason?: string): ReviewResult => ({ partyId, invoiceNo, date, item, qtyKg, rate, total, locationId, overrideReason })
+  const result = (): ReviewResult => ({ partyId, invoiceNo, date, item, qtyKg, rate, total, locationId })
 
   const locations = isPurchase ? warehouses : factories
   const stockNow = locationId && item ? (isPurchase ? rawStockLine(locationId, item as MaterialId).current : outputStockLine(locationId, item as OutputId).current) : null
@@ -381,18 +364,6 @@ export default function ExtractionReview({
                 }))}
               />
             </XField>
-            {isPurchase && (
-              <div className="grid grid-2" style={{ gap: 12 }}>
-                <div>
-                  <div className="xfield-label">Weighbridge slip no. (optional)</div>
-                  <Input value={wbNo} onChange={(e) => setWbNo(e.target.value)} placeholder="e.g. WB-2291" />
-                </div>
-                <div>
-                  <div className="xfield-label">Weighbridge weight (optional)</div>
-                  <InputNumber value={wbKg} onChange={setWbKg} style={{ width: '100%' }} suffix="kg" placeholder={`${qtyKg}`} min={0} />
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -429,11 +400,6 @@ export default function ExtractionReview({
           <Button size="large" icon={<DeleteOutlined />} onClick={onDiscard}>
             Discard
           </Button>
-          {role === 'admin' && issues.length > 0 && verifiedCount === 4 && locationId && (
-            <Button size="large" onClick={() => setOverrideOpen(true)}>
-              Save anyway…
-            </Button>
-          )}
           <Tooltip title={readyToSave ? '' : 'Fix the checks and tick the 4 key values to continue'}>
             <Button type="primary" size="large" icon={<CheckOutlined />} disabled={!readyToSave} onClick={() => onConfirm(result())} style={{ minWidth: 220 }}>
               {isPurchase ? 'Confirm & add to stock' : 'Confirm sale'}
@@ -442,22 +408,6 @@ export default function ExtractionReview({
         </div>
       </div>
 
-      <Modal
-        open={overrideOpen}
-        title="Save with an open issue?"
-        okText="Save with reason"
-        okButtonProps={{ disabled: reason.trim().length < 8 }}
-        onOk={() => {
-          setOverrideOpen(false)
-          onConfirm(result(reason))
-        }}
-        onCancel={() => setOverrideOpen(false)}
-      >
-        <p className="muted">
-          Only admins can do this. The reason is stored with the record and shown in the audit history, signed by <b>{user?.name}</b>.
-        </p>
-        <Input.TextArea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Supplier confirmed by phone that the printed total is correct" />
-      </Modal>
     </div>
   )
 }

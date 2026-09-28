@@ -1,15 +1,12 @@
 import type { ReactNode } from 'react'
 import { Tag, Tooltip } from 'antd'
 import {
-  ArrowDownOutlined,
-  ArrowUpOutlined,
   CheckCircleFilled,
   ClockCircleFilled,
   EditOutlined,
   InfoCircleOutlined,
   ThunderboltFilled,
 } from '@ant-design/icons'
-import { Area, AreaChart, ResponsiveContainer } from 'recharts'
 import { formatKg, formatTonnes } from '../utils/format'
 import { seriesColors } from '../theme/theme'
 import { materialName, outputName } from '../data/selectors'
@@ -84,50 +81,12 @@ export function Qty({ kg, block, strong }: { kg: number; block?: boolean; strong
   )
 }
 
-export function Delta({ value, inverse, suffix = 'vs last' }: { value: number; inverse?: boolean; suffix?: string }) {
-  const good = inverse ? value < 0 : value > 0
-  const cls = Math.abs(value) < 0.5 ? 'flat' : good ? 'up' : 'down'
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-      <span className={`delta ${cls}`}>
-        {value >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-        {Math.abs(value).toFixed(1)}%
-      </span>
-      <span className="faint" style={{ fontSize: 12 }}>
-        {suffix}
-      </span>
-    </span>
-  )
-}
-
-export function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const id = `sp-${color.replace('#', '')}`
-  return (
-    <div style={{ width: 84, height: 30 }}>
-      <ResponsiveContainer>
-        <AreaChart data={data.map((v, i) => ({ i, v }))} margin={{ top: 2, bottom: 2, left: 0, right: 0 }}>
-          <defs>
-            <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <Area type="monotone" dataKey="v" stroke={color} strokeWidth={2} fill={`url(#${id})`} isAnimationActive={false} />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
 export function KpiCard({
   label,
   value,
   sub,
   icon,
   tone,
-  delta,
-  deltaInverse,
-  spark,
   help,
   onClick,
 }: {
@@ -136,9 +95,6 @@ export function KpiCard({
   sub?: ReactNode
   icon: ReactNode
   tone: { bg: string; fg: string }
-  delta?: number
-  deltaInverse?: boolean
-  spark?: number[]
   help?: ReactNode
   onClick?: () => void
 }) {
@@ -155,10 +111,6 @@ export function KpiCard({
         {value}
       </div>
       {sub && <div className="kpi-sub">{sub}</div>}
-      <div className="kpi-foot">
-        {delta !== undefined ? <Delta value={delta} inverse={deltaInverse} /> : <span />}
-        {spark && <Sparkline data={spark} color={tone.fg} />}
-      </div>
     </div>
   )
 }

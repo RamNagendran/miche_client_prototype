@@ -55,12 +55,6 @@ export const periodSubtitle = (period: Period) => {
 
 const inRange = (date: string, [from, to]: [string, string]) => date >= from && date <= to
 
-/** The same length of time immediately before the chosen period — used for "vs last period". */
-const previousRange = (period: Period): [string, string] => {
-  if (period === 'month') return ['2026-08-01', '2026-08-27']
-  return ['2026-04-01', '2026-06-27']
-}
-
 /* ------------------------------------------------------------------ */
 /* Transactions                                                        */
 /* ------------------------------------------------------------------ */
@@ -72,7 +66,6 @@ export const confirmedSales = sales.filter((s) => s.status === 'confirmed')
 export const purchaseValue = (p: Purchase) => p.qtyKg * p.rate
 export const saleValue = (s: Sale) => s.qtyKg * s.rate
 export const productionOutputKg = (p: Production) => p.outputs.rubber + p.outputs.steel + p.outputs.other
-export const productionYield = (p: Production) => (productionOutputKg(p) / p.inputKg) * 100
 
 /* ------------------------------------------------------------------ */
 /* Warehouse (raw material) stock — always "as of today"               */
@@ -103,8 +96,7 @@ export const warehouseStock = (warehouseId: string) => {
     (acc, l) => ({ opening: acc.opening + l.opening, in: acc.in + l.in, out: acc.out + l.out, current: acc.current + l.current }),
     { opening: 0, in: 0, out: 0, current: 0 },
   )
-  const low = lines.filter((l) => l.current < materials.find((m) => m.id === l.material)!.lowStockKg)
-  return { warehouse: wh, lines, total, low }
+  return { warehouse: wh, lines, total }
 }
 
 export const allWarehouseStock = () => warehouses.map((w) => warehouseStock(w.id))
@@ -116,9 +108,6 @@ export const companyRawByMaterial = () =>
     material: m.id,
     current: warehouses.reduce((s, w) => s + (w.materials.includes(m.id) ? rawStockLine(w.id, m.id).current : 0), 0),
   }))
-
-export const lowStockAlerts = () =>
-  allWarehouseStock().flatMap((w) => w.low.map((l) => ({ warehouse: w.warehouse, material: l.material, current: l.current })))
 
 /* ------------------------------------------------------------------ */
 /* Factory output stock — always "as of today"                         */
@@ -189,10 +178,6 @@ const totalsForRange = (range: [string, string]) => {
 }
 
 export const periodTotals = (period: Period) => totalsForRange(periodRange(period))
-export const previousTotals = (period: Period) => totalsForRange(previousRange(period))
-
-export const changePct = (now: number, before: number) => (before ? ((now - before) / Math.abs(before)) * 100 : 0)
-
 export const factoryTotals = (factoryId: string, period: Period) => {
   const range = periodRange(period)
   const pr = production.filter((p) => p.factoryId === factoryId && inRange(p.date, range))
@@ -207,7 +192,6 @@ export const factoryTotals = (factoryId: string, period: Period) => {
     rubber,
     steel,
     other,
-    yieldPct: consumed ? ((rubber + steel + other) / consumed) * 100 : 0,
     salesRevenue: ss.reduce((s, x) => s + saleValue(x), 0),
     salesKg: ss.reduce((s, x) => s + x.qtyKg, 0),
   }
@@ -223,33 +207,6 @@ export const warehouseTotals = (warehouseId: string, period: Period) => {
     consumedKg: pr.reduce((s, p) => s + p.inputKg, 0),
   }
 }
-
-/* ------------------------------------------------------------------ */
-/* Monthly series for charts                                           */
-/* ------------------------------------------------------------------ */
-
-export const months = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09']
-
-export const monthlySeries = () =>
-  months.map((m) => {
-    const ps = confirmedPurchases.filter((p) => p.date.startsWith(m))
-    const ss = confirmedSales.filter((s) => s.date.startsWith(m))
-    const pr = production.filter((p) => p.date.startsWith(m))
-    const purchase = ps.reduce((s, p) => s + purchaseValue(p), 0)
-    const salesV = ss.reduce((s, x) => s + saleValue(x), 0)
-    return {
-      month: dayjs(`${m}-01`).format('MMM'),
-      purchase,
-      sales: salesV,
-      margin: salesV - purchase,
-      purchaseKg: ps.reduce((s, p) => s + p.qtyKg, 0),
-      consumedKg: pr.reduce((s, p) => s + p.inputKg, 0),
-      rubber: pr.reduce((s, p) => s + p.outputs.rubber, 0),
-      steel: pr.reduce((s, p) => s + p.outputs.steel, 0),
-      other: pr.reduce((s, p) => s + p.outputs.other, 0),
-      salesKg: ss.reduce((s, x) => s + x.qtyKg, 0),
-    }
-  })
 
 /* ------------------------------------------------------------------ */
 /* Ledgers                                                             */
@@ -311,7 +268,7 @@ export interface RecordRow {
   qtyKg: number
   value: number | null
   party: string
-  enteredBy: string
+  locationIds: string[]
   status: 'confirmed' | 'review'
 }
 
@@ -327,7 +284,7 @@ export const allRecords = (): RecordRow[] =>
       qtyKg: p.qtyKg,
       value: purchaseValue(p),
       party: supplierById(p.supplierId).name,
-      enteredBy: p.enteredBy,
+      locationIds: [p.warehouseId],
       status: p.status,
     })),
     ...production.map<RecordRow>((p) => ({
@@ -340,7 +297,7 @@ export const allRecords = (): RecordRow[] =>
       qtyKg: p.inputKg,
       value: null,
       party: '—',
-      enteredBy: p.enteredBy,
+      locationIds: [p.warehouseId, p.factoryId],
       status: 'confirmed',
     })),
     ...sales.map<RecordRow>((s) => ({
@@ -353,7 +310,7 @@ export const allRecords = (): RecordRow[] =>
       qtyKg: s.qtyKg,
       value: saleValue(s),
       party: buyerById(s.buyerId).name,
-      enteredBy: s.enteredBy,
+      locationIds: [s.factoryId],
       status: s.status,
     })),
   ].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))

@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Badge, Button, DatePicker, Drawer, Input, Select, Table, Tabs, Timeline } from 'antd'
+import { Badge, Button, DatePicker, Drawer, Input, Select, Table, Tabs } from 'antd'
 import { DownloadOutlined, PlusOutlined, SearchOutlined, RightOutlined, EyeOutlined, ClockCircleFilled } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import dayjs, { type Dayjs } from 'dayjs'
+import type { Dayjs } from 'dayjs'
 import { can, useApp } from '../../context/AppContext'
 import { MaterialTag, PageHeader, Qty, SourceTag, StatusTag } from '../../components/ui'
 import InvoiceDocument from '../../components/InvoiceDocument'
@@ -141,7 +141,7 @@ export default function PurchasesList() {
           ['Bills this year', `${confirmedPurchases.length}`, 'confirmed purchases'],
           ['Raw material bought', formatTonnes(kg), formatKg(kg)],
           ['Total spent', formatINRShort(spend), 'before GST'],
-          ['Average rate', `₹${(spend / kg).toFixed(2)}/kg`, 'all tyre types'],
+          ['Waiting for review', `${reviewPurchases.length} bills`, 'not in stock yet'],
         ].map(([l, v, s]) => (
           <div key={l} className="surface" style={{ padding: '16px 20px' }}>
             <div className="muted" style={{ fontWeight: 700, fontSize: 13 }}>
@@ -185,7 +185,7 @@ export default function PurchasesList() {
                 key: 'review',
                 label: (
                   <span>
-                    Waiting for review <Badge count={reviewPurchases.length} color="#d98a0b" style={{ marginLeft: 4 }} />
+                    Needs review <Badge count={reviewPurchases.length} color="#d98a0b" style={{ marginLeft: 4 }} />
                   </span>
                 ),
               },
@@ -253,22 +253,6 @@ export default function PurchasesList() {
               </div>
             </div>
 
-            <div className="strong" style={{ margin: '22px 0 12px' }}>
-              History
-            </div>
-            <Timeline
-              items={[
-                {
-                  color: 'blue',
-                  title: formatDate(open.date) + ', 10:42 AM',
-                  content: open.source === 'ai' ? `Bill uploaded by ${open.enteredBy} · details read automatically` : `Entered by hand by ${open.enteredBy}`,
-                },
-                ...(open.source === 'ai' ? [{ color: 'gray', title: formatDate(open.date) + ', 10:43 AM', content: 'All automatic checks passed (amounts, GST, duplicate, supplier)' }] : []),
-                open.status === 'confirmed'
-                  ? { color: 'green', title: dayjs(open.date).format('DD MMM YYYY') + ', 10:46 AM', content: `Checked and confirmed by ${open.confirmedBy} · added to ${warehouseById(open.warehouseId).name} stock` }
-                  : { color: 'orange', title: 'Now', content: 'Waiting for someone to check and confirm' },
-              ]}
-            />
           </div>
         )}
       </Drawer>

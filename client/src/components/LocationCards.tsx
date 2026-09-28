@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Tag, Tooltip } from 'antd'
-import { RightOutlined, WarningFilled, FunctionOutlined } from '@ant-design/icons'
+import { RightOutlined, FunctionOutlined } from '@ant-design/icons'
 import { seriesColors } from '../theme/theme'
 import {
   companyOutputStock,
@@ -14,13 +13,12 @@ import {
   warehouseStock,
   type Period,
 } from '../data/selectors'
-import { materials } from '../data/seed'
-import { formatKg, formatPercent, formatTonnes } from '../utils/format'
+import { formatKg, formatTonnes } from '../utils/format'
 import { StockBar } from './ui'
 
 export function WarehouseCard({ id }: { id: string }) {
   const navigate = useNavigate()
-  const { warehouse, lines, total, low } = warehouseStock(id)
+  const { warehouse, lines, total } = warehouseStock(id)
   return (
     <div className="surface loc-card fade-in" onClick={() => navigate(`/warehouses/${id}`)}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -49,27 +47,17 @@ export function WarehouseCard({ id }: { id: string }) {
       </div>
       <StockBar parts={lines.map((l) => ({ key: materialName(l.material), value: l.current, color: seriesColors[l.material] }))} />
       <div style={{ marginTop: 10 }}>
-        {lines.map((l) => {
-          const isLow = low.some((x) => x.material === l.material)
-          return (
-            <div className="mat-row" key={l.material}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="legend-dot" style={{ background: seriesColors[l.material] }} />
-                {materialName(l.material)}
-                {isLow && (
-                  <Tooltip title={`Below reorder level of ${formatKg(materials.find((m) => m.id === l.material)!.lowStockKg)}`}>
-                    <Tag color="warning" icon={<WarningFilled />} style={{ marginInlineEnd: 0, fontWeight: 700, fontSize: 11 }}>
-                      Low
-                    </Tag>
-                  </Tooltip>
-                )}
-              </span>
-              <span className="num" style={{ fontWeight: 700 }}>
-                {formatKg(l.current)}
-              </span>
-            </div>
-          )
-        })}
+        {lines.map((l) => (
+          <div className="mat-row" key={l.material}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="legend-dot" style={{ background: seriesColors[l.material] }} />
+              {materialName(l.material)}
+            </span>
+            <span className="num" style={{ fontWeight: 700 }}>
+              {formatKg(l.current)}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -155,13 +143,10 @@ export function FactoryCard({ id, period }: { id: string; period: Period }) {
         </div>
         <div style={{ background: '#f7f8fa', borderRadius: 10, padding: '10px 12px' }}>
           <div className="faint" style={{ fontSize: 12, fontWeight: 700 }}>
-            Output (yield)
+            Output produced
           </div>
           <div className="num strong" style={{ fontSize: 17 }}>
-            {formatTonnes(t.rubber + t.steel + t.other)}{' '}
-            <span className="faint" style={{ fontSize: 12.5, fontWeight: 700 }}>
-              {formatPercent(t.yieldPct, 0)}
-            </span>
+            {formatTonnes(t.rubber + t.steel + t.other)}
           </div>
         </div>
       </div>

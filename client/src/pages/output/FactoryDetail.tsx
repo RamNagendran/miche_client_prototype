@@ -2,15 +2,11 @@ import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Button, Segmented, Table, Tabs } from 'antd'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons'
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import dayjs from 'dayjs'
 import { can, useApp } from '../../context/AppContext'
 import { Formula, MaterialTag, PageHeader, ProductTag, SectionTitle, StatusTag } from '../../components/ui'
-import ChartTooltip from '../../components/ChartTooltip'
-import { buyerById, factoryOutputStock, factoryTotals, months, outputName, periodLabels, saleValue, warehouseById } from '../../data/selectors'
+import { buyerById, factoryOutputStock, factoryTotals, outputName, periodLabels, saleValue, warehouseById } from '../../data/selectors'
 import { factories, production, sales } from '../../data/seed'
-import { seriesColors } from '../../theme/theme'
-import { formatDate, formatINR, formatINRShort, formatKg, formatPercent, formatRate, formatTonnes } from '../../utils/format'
+import { formatDate, formatINR, formatINRShort, formatKg, formatRate, formatTonnes } from '../../utils/format'
 import type { OutputId } from '../../data/types'
 
 export default function FactoryDetail() {
@@ -24,15 +20,6 @@ export default function FactoryDetail() {
   const stock = factoryOutputStock(f.id)
   const t = factoryTotals(f.id, period)
   const line = stock.lines.find((l) => l.product === product)!
-  const chart = months.map((m) => {
-    const pr = production.filter((p) => p.factoryId === f.id && p.date.startsWith(m))
-    return {
-      month: dayjs(`${m}-01`).format('MMM'),
-      rubber: pr.reduce((s, p) => s + p.outputs.rubber, 0),
-      steel: pr.reduce((s, p) => s + p.outputs.steel, 0),
-      other: pr.reduce((s, p) => s + p.outputs.other, 0),
-    }
-  })
 
   return (
     <div className="page">
@@ -70,7 +57,7 @@ export default function FactoryDetail() {
             {formatTonnes(t.consumed)} <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>used</span>
           </div>
           <div className="num" style={{ color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>
-            {formatTonnes(t.rubber + t.steel + t.other)} produced · yield {formatPercent(t.yieldPct)}
+            {formatTonnes(t.rubber + t.steel + t.other)} produced
           </div>
           <div className="num" style={{ color: 'rgba(255,255,255,0.75)' }}>
             {formatINRShort(t.salesRevenue)} sold · {t.runs} entries
@@ -112,29 +99,6 @@ export default function FactoryDetail() {
             { op: '=', label: 'Available now', value: formatKg(line.current), kind: 'result' },
           ]}
         />
-      </div>
-
-      <div className="surface" style={{ padding: 22, marginTop: 16 }}>
-        <div className="strong" style={{ fontSize: 16 }}>
-          Production by month
-        </div>
-        <div className="faint" style={{ fontSize: 13 }}>
-          kg produced at {f.name}
-        </div>
-        <div style={{ height: 260, marginTop: 10 }}>
-          <ResponsiveContainer>
-            <BarChart data={chart} barCategoryGap="30%" margin={{ top: 10, right: 8, left: 4, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="#eef0f3" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#8a919e', fontSize: 12.5 }} />
-              <YAxis axisLine={false} tickLine={false} width={56} tick={{ fill: '#8a919e', fontSize: 12 }} tickFormatter={(v) => formatTonnes(v)} />
-              <Tooltip cursor={{ fill: 'rgba(16,24,40,0.04)' }} content={<ChartTooltip format={(v) => formatKg(v)} />} />
-              <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 13 }} formatter={(v) => <span style={{ color: '#3a3f47', fontWeight: 600 }}>{v}</span>} />
-              <Bar isAnimationActive={false} dataKey="rubber" name="Rubber" stackId="a" fill={seriesColors.rubber} stroke="#fff" strokeWidth={1} maxBarSize={44} />
-              <Bar isAnimationActive={false} dataKey="steel" name="Steel" stackId="a" fill={seriesColors.steel} stroke="#fff" strokeWidth={1} maxBarSize={44} />
-              <Bar isAnimationActive={false} dataKey="other" name="Other" stackId="a" fill={seriesColors.other} stroke="#fff" strokeWidth={1} radius={[4, 4, 0, 0]} maxBarSize={44} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
 
       <div className="surface table-card" style={{ marginTop: 16 }}>

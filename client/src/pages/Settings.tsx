@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { App, Avatar, Button, Form, Input, Modal, Select, Switch, Table, Tabs, Tag } from 'antd'
-import { CheckOutlined, CloseOutlined, PlusOutlined, CloudUploadOutlined, FileExcelFilled, FilePdfFilled, DatabaseFilled, ArrowRightOutlined } from '@ant-design/icons'
+import { CheckOutlined, CloseOutlined, PlusOutlined, ArrowRightOutlined } from '@ant-design/icons'
 import { PageHeader } from '../components/ui'
 import { buyers, factories, materials, outputs, suppliers, users, warehouses } from '../data/seed'
 import { factoryById, warehouseById } from '../data/selectors'
 import { seriesColors } from '../theme/theme'
-import { formatKg } from '../utils/format'
 import type { Role } from '../data/types'
 
 const roleTag: Record<Role, { label: string; color: string }> = {
@@ -19,7 +18,6 @@ const permissions: [string, boolean, boolean, boolean][] = [
   ['See warehouse and factory stock', true, true, true],
   ['Record purchases, production and sales', false, true, true],
   ['Check and confirm uploaded bills', false, true, true],
-  ['Save a bill with an open issue (with reason)', false, true, false],
   ['Edit or cancel a saved record', false, true, false],
   ['See finance and download reports', true, true, false],
   ['Manage users, locations and master lists', false, true, false],
@@ -98,7 +96,6 @@ export default function Settings() {
                         ),
                       },
                       { title: 'Can work on', dataIndex: 'access' },
-                      { title: 'Last active', dataIndex: 'lastActive', render: (v) => <span className="muted">{v}</span> },
                       { key: 'on', title: 'Active', render: () => <Switch defaultChecked size="small" /> },
                     ]}
                   />
@@ -156,7 +153,7 @@ export default function Settings() {
                     </div>
                   ))}
                   <div className="info-banner" style={{ gridColumn: '1 / -1' }}>
-                    Each warehouse and factory keeps its own stock. Moving stock between locations is planned for Stage 2.
+                    Each warehouse and factory keeps its own stock. Totals across locations are simple sums.
                   </div>
                 </div>
               ),
@@ -178,7 +175,6 @@ export default function Settings() {
                       columns={[
                         { title: 'Type', render: (_, m) => <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><span className="legend-dot" style={{ background: seriesColors[m.id] }} />{m.name}</span> },
                         { title: 'Description', dataIndex: 'description', render: (v) => <span className="muted">{v}</span> },
-                        { title: 'Reorder level', dataIndex: 'lowStockKg', align: 'right', render: (v) => <span className="num">{formatKg(v)}</span> },
                       ]}
                     />
                   </div>
@@ -206,33 +202,6 @@ export default function Settings() {
             },
             { key: 'suppliers', label: `Suppliers (${suppliers.length})`, children: partyTable(suppliers) },
             { key: 'buyers', label: `Buyers (${buyers.length})`, children: partyTable(buyers) },
-            {
-              key: 'import',
-              label: 'Bring in old records',
-              children: (
-                <div style={{ maxWidth: 820 }}>
-                  <p className="muted" style={{ fontSize: 15 }}>
-                    Existing records in Excel, PDFs or Tally can be brought in once, during setup. This is handled as a separate migration step with the Michy team.
-                  </p>
-                  <div className="grid grid-3" style={{ marginTop: 16 }}>
-                    {[
-                      { icon: <FileExcelFilled style={{ color: '#1f7a45' }} />, t: 'Excel sheets', d: 'Opening stock, past purchases and sales' },
-                      { icon: <DatabaseFilled style={{ color: '#2F6FEB' }} />, t: 'Tally export', d: 'Ledgers and vouchers' },
-                      { icon: <FilePdfFilled style={{ color: '#D82E54' }} />, t: 'Old PDF bills', d: 'Read in bulk, checked in batches' },
-                    ].map((c) => (
-                      <div key={c.t} className="choice" style={{ padding: 20 }}>
-                        <div style={{ fontSize: 28 }}>{c.icon}</div>
-                        <h3 style={{ fontSize: 16, marginTop: 10 }}>{c.t}</h3>
-                        <p style={{ fontSize: 13 }}>{c.d}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <Button size="large" icon={<CloudUploadOutlined />} style={{ marginTop: 20 }}>
-                    Request a setup session
-                  </Button>
-                </div>
-              ),
-            },
           ]}
         />
       </div>

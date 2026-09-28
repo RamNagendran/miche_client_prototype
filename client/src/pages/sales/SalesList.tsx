@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, DatePicker, Drawer, Input, Segmented, Select, Table, Timeline } from 'antd'
+import { Button, DatePicker, Drawer, Input, Segmented, Select, Table } from 'antd'
 import { DownloadOutlined, PlusOutlined, SearchOutlined, FilePdfFilled } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { Dayjs } from 'dayjs'
@@ -91,7 +91,7 @@ export default function SalesList() {
               {formatINRShort(p.value)}
             </div>
             <div className="faint" style={{ fontSize: 12.5 }}>
-              {formatTonnes(p.kg)} · avg ₹{(p.value / (p.kg || 1)).toFixed(2)}/kg
+              {formatTonnes(p.kg)} sold
             </div>
           </div>
         ))}
@@ -138,15 +138,6 @@ export default function SalesList() {
             <Button block size="large" icon={<FilePdfFilled style={{ color: '#D82E54' }} />} style={{ marginTop: 16 }}>
               Open invoice PDF
             </Button>
-            <div className="strong" style={{ margin: '22px 0 12px' }}>
-              History
-            </div>
-            <Timeline
-              items={[
-                { color: 'blue', title: formatDate(open.date), content: open.source === 'ai' ? `Invoice uploaded by ${open.enteredBy} · details read automatically` : `Entered by hand by ${open.enteredBy}` },
-                { color: 'green', title: formatDate(open.date), content: `Confirmed by ${open.confirmedBy} · ${factoryById(open.factoryId).name} stock reduced` },
-              ]}
-            />
           </div>
         )}
       </Drawer>

@@ -191,7 +191,6 @@ export default function NewPurchase() {
                 ['Invoice', `${r.invoiceNo} · ${formatDate(r.date)}`],
                 ['Quantity × rate', `${formatKg(r.qtyKg)} × ₹${r.rate.toFixed(2)}`],
                 ['Purchase cost (before GST)', formatINR(r.qtyKg * r.rate)],
-                ...(r.overrideReason ? ([['Saved by admin with note', r.overrideReason]] as [string, string][]) : []),
               ]}
               effects={[
                 <>

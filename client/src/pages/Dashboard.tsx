@@ -9,23 +9,21 @@ import {
   RightOutlined,
   ExperimentOutlined,
 } from '@ant-design/icons'
-import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import dayjs from 'dayjs'
 import { useApp } from '../context/AppContext'
-import { KpiCard, PageHeader, SectionTitle } from '../components/ui'
+import { Formula, KpiCard, PageHeader, SectionTitle } from '../components/ui'
 import ChartTooltip from '../components/ChartTooltip'
 import { CompanyOutputCard, CompanyRawCard, FactoryCard, WarehouseCard } from '../components/LocationCards'
 import {
   allRecords,
-  changePct,
   companyOutputStock,
   companyRawTotal,
   factoryTotals,
-  monthlySeries,
+  outputName,
   periodLabels,
   periodSubtitle,
   periodTotals,
-  previousTotals,
   warehouseStock,
 } from '../data/selectors'
 import { factories, TODAY, warehouses } from '../data/seed'
@@ -36,10 +34,6 @@ export default function Dashboard() {
   const { user, period } = useApp()
   const navigate = useNavigate()
   const t = periodTotals(period)
-  const prev = previousTotals(period)
-  // A full financial year has no earlier period to compare against in Stage 1 data.
-  const cmp = (now: number, before: number) => (period === 'fy' ? undefined : changePct(now, before))
-  const series = monthlySeries()
   const rawTotal = companyRawTotal()
   const out = companyOutputStock()
   const rubber = out.find((o) => o.product === 'rubber')!
@@ -117,9 +111,6 @@ export default function Dashboard() {
           sub={`${formatKg(t.purchaseKg)} of raw material`}
           icon={<ShoppingCartOutlined />}
           tone={{ bg: '#eef4fb', fg: seriesColors.purchase }}
-          delta={cmp(t.purchaseSpend, prev.purchaseSpend)}
-          deltaInverse
-          spark={series.map((s) => s.purchase)}
           onClick={() => navigate('/purchases')}
         />
         <KpiCard
@@ -128,8 +119,6 @@ export default function Dashboard() {
           sub={`${formatKg(t.salesKg)} sold`}
           icon={<ShopOutlined />}
           tone={{ bg: brand.primarySoft, fg: brand.primary }}
-          delta={cmp(t.salesRevenue, prev.salesRevenue)}
-          spark={series.map((s) => s.sales)}
           onClick={() => navigate('/sales')}
         />
         <KpiCard
@@ -138,9 +127,7 @@ export default function Dashboard() {
           sub={`${formatPercent(t.marginPct)} of sales value`}
           icon={<RiseOutlined />}
           tone={{ bg: '#e6f5f3', fg: seriesColors.margin }}
-          delta={cmp(t.margin, prev.margin)}
-          spark={series.map((s) => s.margin)}
-          help="Sales received minus purchases spent. Labour, electricity and transport are not included in Stage 1."
+          help="Sales received minus purchases spent. Labour, electricity and transport costs are not included."
           onClick={() => navigate('/finance')}
         />
         <KpiCard
@@ -170,33 +157,46 @@ export default function Dashboard() {
 
       <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', marginTop: 16 }}>
         <div className="surface" style={{ padding: 22 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
               <div className="strong" style={{ fontSize: 16 }}>
-                Purchases vs sales, month by month
+                Money in and out
               </div>
               <div className="faint" style={{ fontSize: 13 }}>
-                The line shows the basic difference (sales − purchases)
+                {periodLabels[period]} · all figures before GST
               </div>
             </div>
             <Button type="link" onClick={() => navigate('/finance')} style={{ paddingInline: 0 }}>
               Open finance <RightOutlined />
             </Button>
           </div>
-          <div style={{ height: 300 }}>
-            <ResponsiveContainer>
-              <ComposedChart data={series} barGap={2} barCategoryGap="28%" margin={{ top: 16, right: 8, left: 4, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="#eef0f3" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#8a919e', fontSize: 12.5 }} />
-                <YAxis axisLine={false} tickLine={false} width={64} tick={{ fill: '#8a919e', fontSize: 12 }} tickFormatter={(v) => formatINRShort(v).replace('.00', '')} />
-                <Tooltip cursor={{ fill: 'rgba(16,24,40,0.04)' }} content={<ChartTooltip format={(v) => formatINRShort(v)} />} />
-                <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 13, paddingTop: 8 }} formatter={(v) => <span style={{ color: '#3a3f47', fontWeight: 600 }}>{v}</span>} />
-                <Bar isAnimationActive={false} dataKey="purchase" name="Purchases" fill={seriesColors.purchase} radius={[4, 4, 0, 0]} maxBarSize={34} />
-                <Bar isAnimationActive={false} dataKey="sales" name="Sales" fill={seriesColors.sales} radius={[4, 4, 0, 0]} maxBarSize={34} />
-                <Line isAnimationActive={false} dataKey="margin" name="Basic difference" stroke={seriesColors.margin} strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 5 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
+          <Formula
+            parts={[
+              { label: `Received from sales · ${t.salesCount} invoices`, value: formatINRShort(t.salesRevenue), kind: 'in' },
+              { op: '−', label: `Spent on purchases · ${t.purchaseCount} bills`, value: formatINRShort(t.purchaseSpend), kind: 'out' },
+              { op: '=', label: 'Basic difference', value: formatINRShort(t.margin), kind: 'result' },
+            ]}
+          />
+          <div className="faint" style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '22px 0 10px' }}>
+            Sales by product
           </div>
+          {t.salesByProduct.map((p) => (
+            <div key={p.product} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 190px', alignItems: 'center', gap: 14, padding: '7px 0' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+                <span className="legend-dot" style={{ background: seriesColors[p.product] }} />
+                {outputName(p.product)}
+              </span>
+              <div style={{ height: 10, borderRadius: 99, background: '#eef0f3', overflow: 'hidden' }}>
+                <div style={{ width: `${(p.value / (t.salesRevenue || 1)) * 100}%`, height: '100%', background: seriesColors[p.product], borderRadius: 99 }} />
+              </div>
+              <span className="num" style={{ textAlign: 'right' }}>
+                <b>{formatINRShort(p.value)}</b>
+                <span className="faint" style={{ marginLeft: 8 }}>
+                  {formatTonnes(p.kg)}
+                </span>
+              </span>
+            </div>
+          ))}
         </div>
 
         <div className="surface" style={{ padding: 22, display: 'flex', flexDirection: 'column' }}>
@@ -302,7 +302,7 @@ export default function Dashboard() {
         <div className="surface" style={{ padding: '20px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <div className="strong" style={{ fontSize: 16 }}>
-              Latest activity
+              Latest entries
             </div>
             <Button type="link" onClick={() => navigate('/records')} style={{ paddingInline: 0 }}>
               All records
@@ -314,7 +314,7 @@ export default function Dashboard() {
               color: r.type === 'purchase' ? seriesColors.purchase : r.type === 'sale' ? brand.primary : '#3a3f47',
               title: (
                 <span className="faint" style={{ fontSize: 12 }}>
-                  {formatDateShort(r.date)} · {r.enteredBy}
+                  {formatDateShort(r.date)} · {r.id}
                 </span>
               ),
               content: (
@@ -325,7 +325,7 @@ export default function Dashboard() {
                   <div className="muted num" style={{ fontSize: 12.5 }}>
                     {formatKg(r.qtyKg)} · {r.location}
                     {r.value !== null && ` · ${formatINRShort(r.value)}`}
-                    {r.status === 'review' && <span style={{ color: brand.amber, fontWeight: 700 }}> · waiting for review</span>}
+                    {r.status === 'review' && <span style={{ color: brand.amber, fontWeight: 700 }}> · needs review</span>}
                   </div>
                 </div>
               ),

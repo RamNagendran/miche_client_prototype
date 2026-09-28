@@ -8,7 +8,6 @@ export interface Material {
   name: string
   short: string
   description: string
-  lowStockKg: number
 }
 
 export interface OutputProduct {
@@ -53,7 +52,8 @@ export interface User {
   role: Role
   title: string
   access: string
-  lastActive: string
+  /** Warehouses and factories this person works on. */
+  locations: string[]
   initials: string
 }
 
@@ -71,8 +71,6 @@ export interface Purchase {
   invoiceNo: string
   status: EntryStatus
   source: EntrySource
-  enteredBy: string
-  confirmedBy?: string
 }
 
 export interface Production {
@@ -83,7 +81,6 @@ export interface Production {
   material: MaterialId
   inputKg: number
   outputs: Record<OutputId, number>
-  enteredBy: string
 }
 
 export interface Sale {
@@ -97,6 +94,4 @@ export interface Sale {
   invoiceNo: string
   status: EntryStatus
   source: EntrySource
-  enteredBy: string
-  confirmedBy?: string
 }

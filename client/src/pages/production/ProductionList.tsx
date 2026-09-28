@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input, Segmented, Select, Table, Tooltip } from 'antd'
+import { Button, Input, Segmented, Select, Table } from 'antd'
 import { DownloadOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { can, useApp } from '../../context/AppContext'
-import { MaterialTag, PageHeader, StockBar } from '../../components/ui'
+import { MaterialTag, PageHeader } from '../../components/ui'
 import { factories, production, warehouses } from '../../data/seed'
-import { factoryById, productionOutputKg, productionYield, warehouseById } from '../../data/selectors'
-import { seriesColors } from '../../theme/theme'
-import { formatDate, formatKg, formatPercent, formatTonnes } from '../../utils/format'
+import { factoryById, productionOutputKg, warehouseById } from '../../data/selectors'
+import { formatDate, formatKg, formatTonnes } from '../../utils/format'
 import type { Production } from '../../data/types'
 
 export default function ProductionList() {
@@ -33,7 +32,7 @@ export default function ProductionList() {
   const other = rows.reduce((s, p) => s + p.outputs.other, 0)
 
   const columns: ColumnsType<Production> = [
-    { title: 'Entry', key: 'id', render: (_, p) => <div><span className="id-link">{p.id}</span><div className="faint" style={{ fontSize: 12.5 }}>{formatDate(p.date)} · {p.enteredBy.split(' ')[0]}</div></div> },
+    { title: 'Entry', key: 'id', render: (_, p) => <div><span className="id-link">{p.id}</span><div className="faint" style={{ fontSize: 12.5 }}>{formatDate(p.date)}</div></div> },
     {
       title: 'Factory',
       key: 'f',
@@ -56,29 +55,7 @@ export default function ProductionList() {
     { title: 'Rubber', key: 'r', align: 'right', render: (_, p) => <span className="num">{formatKg(p.outputs.rubber)}</span> },
     { title: 'Steel', key: 's', align: 'right', render: (_, p) => <span className="num">{formatKg(p.outputs.steel)}</span> },
     { title: 'Other', key: 'o', align: 'right', render: (_, p) => <span className="num faint">{p.outputs.other ? formatKg(p.outputs.other) : '—'}</span> },
-    {
-      title: 'Yield',
-      key: 'y',
-      width: 150,
-      render: (_, p) => (
-        <Tooltip title={`${formatKg(productionOutputKg(p))} out of ${formatKg(p.inputKg)} · process loss ${formatKg(p.inputKg - productionOutputKg(p))}`}>
-          <div>
-            <div className="num" style={{ fontWeight: 700, fontSize: 13 }}>
-              {formatPercent(productionYield(p))}
-            </div>
-            <StockBar
-              height={6}
-              total={p.inputKg}
-              parts={[
-                { key: 'Rubber', value: p.outputs.rubber, color: seriesColors.rubber },
-                { key: 'Steel', value: p.outputs.steel, color: seriesColors.steel },
-                { key: 'Other', value: p.outputs.other, color: seriesColors.other },
-              ]}
-            />
-          </div>
-        </Tooltip>
-      ),
-    },
+    { title: 'Total output', key: 't', align: 'right', render: (_, p) => <span className="num strong">{formatKg(productionOutputKg(p))}</span> },
   ]
 
   return (
@@ -105,7 +82,7 @@ export default function ProductionList() {
           ['Raw material used', formatTonnes(input), `${rows.length} entries`],
           ['Rubber produced', formatTonnes(rubber), formatKg(rubber)],
           ['Steel produced', formatTonnes(steel), formatKg(steel)],
-          ['Average yield', formatPercent(((rubber + steel + other) / (input || 1)) * 100), `other ${formatTonnes(other)} · loss ${formatTonnes(input - rubber - steel - other)}`],
+          ['Other produced', formatTonnes(other), formatKg(other)],
         ].map(([l, v, s]) => (
           <div key={l} className="surface" style={{ padding: '16px 20px' }}>
             <div className="muted" style={{ fontWeight: 700, fontSize: 13 }}>

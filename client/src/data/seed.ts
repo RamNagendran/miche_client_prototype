@@ -21,10 +21,10 @@ export const TODAY = '2026-09-27'
 export const FY_START = '2026-04-01'
 
 export const materials: Material[] = [
-  { id: 'truck', name: 'Truck tyres', short: 'Truck', description: 'TBR / bus & truck scrap tyres, whole or cut', lowStockKg: 8000 },
-  { id: 'car', name: 'Car tyres', short: 'Car', description: 'PCR / passenger car scrap tyres', lowStockKg: 8000 },
-  { id: 'twowheeler', name: 'Two-wheeler tyres', short: '2-Wheeler', description: 'Bike & scooter scrap tyres', lowStockKg: 5000 },
-  { id: 'otr', name: 'OTR tyres', short: 'OTR', description: 'Off-the-road / earthmover tyres', lowStockKg: 6000 },
+  { id: 'truck', name: 'Truck tyres', short: 'Truck', description: 'TBR / bus & truck scrap tyres, whole or cut' },
+  { id: 'car', name: 'Car tyres', short: 'Car', description: 'PCR / passenger car scrap tyres' },
+  { id: 'twowheeler', name: 'Two-wheeler tyres', short: '2-Wheeler', description: 'Bike & scooter scrap tyres' },
+  { id: 'otr', name: 'OTR tyres', short: 'OTR', description: 'Off-the-road / earthmover tyres' },
 ]
 
 export const outputs: OutputProduct[] = [
@@ -64,10 +64,10 @@ export const buyers: Party[] = [
 ]
 
 export const users: User[] = [
-  { id: 'U1', name: 'Karthik Raman', email: 'karthik@michy.in', role: 'ceo', title: 'Chief Executive Officer', access: 'All locations · view only', lastActive: 'Today, 9:12 AM', initials: 'KR' },
-  { id: 'U2', name: 'Priya Sundar', email: 'priya@michy.in', role: 'admin', title: 'Operations Admin', access: 'All locations · full access', lastActive: 'Today, 10:40 AM', initials: 'PS' },
-  { id: 'U3', name: 'Suresh Murugan', email: 'suresh@michy.in', role: 'operator', title: 'Site Supervisor', access: 'Warehouse A · Factory A', lastActive: 'Today, 11:05 AM', initials: 'SM' },
-  { id: 'U4', name: 'Divya Krishnan', email: 'divya@michy.in', role: 'operator', title: 'Site Supervisor', access: 'Warehouses B, C · Factories B, C', lastActive: 'Yesterday, 6:20 PM', initials: 'DK' },
+  { id: 'U1', name: 'Karthik Raman', email: 'karthik@michy.in', role: 'ceo', title: 'Chief Executive Officer', access: 'All locations · view only', locations: ['WA', 'WB', 'WC', 'FA', 'FB', 'FC'], initials: 'KR' },
+  { id: 'U2', name: 'Priya Sundar', email: 'priya@michy.in', role: 'admin', title: 'Operations Admin', access: 'All locations · full access', locations: ['WA', 'WB', 'WC', 'FA', 'FB', 'FC'], initials: 'PS' },
+  { id: 'U3', name: 'Suresh Murugan', email: 'suresh@michy.in', role: 'operator', title: 'Site Supervisor', access: 'Warehouse A · Factory A', locations: ['WA', 'FA'], initials: 'SM' },
+  { id: 'U4', name: 'Divya Krishnan', email: 'divya@michy.in', role: 'operator', title: 'Site Supervisor', access: 'Warehouses B, C · Factories B, C', locations: ['WB', 'WC', 'FB', 'FC'], initials: 'DK' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -110,7 +110,6 @@ const yields: Record<MaterialId, Record<OutputId, number>> = {
 }
 const supplierPrefix: Record<string, string> = { S1: 'SBT', S2: 'KSS', S3: 'NTR', S4: 'CRS', S5: 'MWR', S6: 'AE' }
 
-const operatorFor = (locationId: string) => (locationId.endsWith('A') ? 'Suresh Murugan' : 'Divya Krishnan')
 const round = (n: number, step: number) => Math.round(n / step) * step
 
 function simulate() {
@@ -159,8 +158,6 @@ function simulate() {
         invoiceNo: `${supplierPrefix[supplierId]}/26-27/${String(Math.floor(100 + r() * 800)).padStart(4, '0')}`,
         status: 'confirmed',
         source: r() < 0.72 ? 'ai' : 'manual',
-        enteredBy: operatorFor(wh.id),
-        confirmedBy: operatorFor(wh.id),
       })
     }
 
@@ -192,7 +189,6 @@ function simulate() {
           material: best.material,
           inputKg,
           outputs: o,
-          enteredBy: operatorFor(f.id),
         })
       }
     }
@@ -224,8 +220,6 @@ function simulate() {
           invoiceNo: `MR/${f.code}/26-27/${String(sSeq + 90).padStart(4, '0')}`,
           status: 'confirmed',
           source: r() < 0.55 ? 'ai' : 'manual',
-          enteredBy: operatorFor(f.id),
-          confirmedBy: operatorFor(f.id),
         })
       }
     }
@@ -233,8 +227,8 @@ function simulate() {
 
   // Two bills uploaded this week are still waiting for someone to check them — they are NOT in stock yet.
   purchases.push(
-    { id: `PUR-2026-0${pSeq++}`, date: '2026-09-25', supplierId: 'S4', material: 'car', warehouseId: 'WA', qtyKg: 9240, rate: 11.85, invoiceNo: 'CRS/26-27/0772', status: 'review', source: 'ai', enteredBy: 'Suresh Murugan' },
-    { id: `PUR-2026-0${pSeq}`, date: '2026-09-26', supplierId: 'S2', material: 'truck', warehouseId: 'WC', qtyKg: 12680, rate: 14.6, invoiceNo: 'KSS/26-27/0815', status: 'review', source: 'ai', enteredBy: 'Divya Krishnan' },
+    { id: `PUR-2026-0${pSeq++}`, date: '2026-09-25', supplierId: 'S4', material: 'car', warehouseId: 'WA', qtyKg: 9240, rate: 11.85, invoiceNo: 'CRS/26-27/0772', status: 'review', source: 'ai' },
+    { id: `PUR-2026-0${pSeq}`, date: '2026-09-26', supplierId: 'S2', material: 'truck', warehouseId: 'WC', qtyKg: 12680, rate: 14.6, invoiceNo: 'KSS/26-27/0815', status: 'review', source: 'ai' },
   )
 
   return { purchases, production, sales }

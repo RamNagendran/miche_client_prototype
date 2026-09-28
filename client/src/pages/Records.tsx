@@ -24,7 +24,7 @@ export default function Records() {
     .filter((r) => type === 'all' || r.type === type)
     .filter((r) => !loc || r.location.includes(loc))
     .filter((r) => !range?.[0] || !range?.[1] || (r.date >= range[0].format('YYYY-MM-DD') && r.date <= range[1].format('YYYY-MM-DD')))
-    .filter((r) => !q || `${r.id} ${r.party} ${r.item} ${r.enteredBy}`.toLowerCase().includes(q.toLowerCase()))
+    .filter((r) => !q || `${r.id} ${r.party} ${r.item} ${r.location}`.toLowerCase().includes(q.toLowerCase()))
 
   return (
     <div className="page">
@@ -49,7 +49,7 @@ export default function Records() {
               { value: 'sale', label: 'Sales' },
             ]}
           />
-          <Input prefix={<SearchOutlined className="faint" />} placeholder="Search ID, supplier, buyer or person" style={{ width: 300 }} allowClear value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input prefix={<SearchOutlined className="faint" />} placeholder="Search ID, supplier, buyer or location" style={{ width: 300 }} allowClear value={q} onChange={(e) => setQ(e.target.value)} />
           <Select
             allowClear
             placeholder="All locations"
@@ -107,11 +107,8 @@ export default function Records() {
               width: 190,
               ellipsis: { showTitle: false },
               render: (_, r) => (
-                <Tooltip title={r.party !== '—' ? r.party : undefined} placement="topLeft">
+<Tooltip title={r.party !== '—' ? r.party : undefined} placement="topLeft">
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.party}</div>
-                  <div className="faint" style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    by {r.enteredBy}
-                  </div>
                 </Tooltip>
               ),
             },

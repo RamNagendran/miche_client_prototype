@@ -18,8 +18,9 @@ const tiles = [
 export default function OperatorHome() {
   const { user } = useApp()
   const navigate = useNavigate()
-  const mine = allRecords().filter((r) => r.enteredBy === user?.name).slice(0, 6)
-  const myQueue = reviewPurchases.filter((p) => p.enteredBy === user?.name)
+  const sites = user?.locations ?? []
+  const mine = allRecords().filter((r) => r.locationIds.some((l) => sites.includes(l))).slice(0, 6)
+  const myQueue = reviewPurchases.filter((p) => sites.includes(p.warehouseId))
   const hour = dayjs().hour()
 
   return (

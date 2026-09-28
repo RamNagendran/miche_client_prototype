@@ -19,14 +19,12 @@ import {
   ShoppingCartOutlined,
   ShopOutlined,
   SwapOutlined,
-  WarningFilled,
   FileTextFilled,
 } from '@ant-design/icons'
 import { can, useApp } from '../context/AppContext'
 import { MichyMark } from '../components/ui'
 import { users } from '../data/seed'
-import { lowStockAlerts, materialName, periodLabels, periodSubtitle, reviewPurchases, type Period } from '../data/selectors'
-import { formatKg } from '../utils/format'
+import { periodLabels, periodSubtitle, reviewPurchases, type Period } from '../data/selectors'
 import type { Role } from '../data/types'
 
 const { Sider, Header, Content } = Layout
@@ -99,7 +97,6 @@ export default function AppLayout() {
     ...(perms.manageSettings ? [{ key: '/settings', icon: <SettingOutlined />, label: 'Settings' }] : []),
   ]
 
-  const alerts = lowStockAlerts()
   const notifications = (
     <div style={{ width: 340 }}>
       <div style={{ fontWeight: 800, fontSize: 15, padding: '4px 4px 10px' }}>Notifications</div>
@@ -118,21 +115,6 @@ export default function AppLayout() {
           </div>
         </div>
       )}
-      {alerts.map((a) => (
-        <div key={a.warehouse.id + a.material} className="qa-row" onClick={() => navigate(`/warehouses/${a.warehouse.id}`)}>
-          <span className="kpi-icon" style={{ background: '#fff6e6', color: '#d98a0b' }}>
-            <WarningFilled />
-          </span>
-          <div style={{ flex: 1 }}>
-            <div className="strong" style={{ fontSize: 13.5 }}>
-              Low stock: {materialName(a.material)}
-            </div>
-            <div className="faint" style={{ fontSize: 12.5 }}>
-              {a.warehouse.name} has {formatKg(a.current)} left · below reorder level
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   )
 
@@ -250,7 +232,7 @@ export default function AppLayout() {
               <Button shape="circle" size="large" icon={<FileSearchOutlined />} onClick={() => navigate(perms.viewRecords ? '/records' : '/purchases')} />
             </Tooltip>
             <Popover content={notifications} trigger="click" placement="bottomRight">
-              <Badge count={reviewPurchases.length + alerts.length} size="small" offset={[-4, 4]}>
+              <Badge count={reviewPurchases.length} size="small" offset={[-4, 4]}>
                 <Button shape="circle" size="large" icon={<BellOutlined />} />
               </Badge>
             </Popover>

@@ -8,15 +8,8 @@ import SavedResult from '../../components/SavedResult'
 import { factories, production, TODAY } from '../../data/seed'
 import { factoryById, materialName, outputStockLine, rawStockLine, warehouseById } from '../../data/selectors'
 import { seriesColors } from '../../theme/theme'
-import { formatDate, formatKg, formatPercent } from '../../utils/format'
+import { formatDate, formatKg } from '../../utils/format'
 import type { MaterialId, OutputId } from '../../data/types'
-
-const typicalYield: Record<MaterialId, Record<OutputId, number>> = {
-  truck: { rubber: 64, steel: 27, other: 4 },
-  car: { rubber: 61, steel: 15, other: 13 },
-  twowheeler: { rubber: 67, steel: 9, other: 11 },
-  otr: { rubber: 70, steel: 18, other: 5 },
-}
 
 const kgInput = {
   formatter: (v: number | string | undefined) => `${v ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
@@ -38,7 +31,6 @@ export default function NewProduction() {
   const available = source ? rawStockLine(source.wid, source.material).current : 0
   const input = inputKg ?? 0
   const outTotal = (out.rubber ?? 0) + (out.steel ?? 0) + (out.other ?? 0)
-  const loss = input - outTotal
   const overInput = outTotal > input
   const overStock = input > available
   const nextId = `PRD-2026-0${Number(production[production.length - 1].id.slice(-3)) + 1}`
@@ -66,7 +58,7 @@ export default function NewProduction() {
             ['Rubber produced', formatKg(out.rubber ?? 0)],
             ['Steel produced', formatKg(out.steel ?? 0)],
             ...((out.other ?? 0) > 0 ? ([['Other produced', formatKg(out.other ?? 0)]] as [string, string][]) : []),
-            ['Yield', formatPercent((outTotal / input) * 100)],
+            ['Total output', formatKg(outTotal)],
           ]}
           effects={[
             <>
@@ -266,36 +258,17 @@ export default function NewProduction() {
                     style={{ width: '100%', marginTop: 10 }}
                     suffix="kg"
                     min={0}
-                    placeholder={`${Math.round((input * typicalYield[source.material][o]) / 100)}`}
+                    placeholder="0"
                     {...kgInput}
                   />
-                  <div className="faint" style={{ fontSize: 12.5, marginTop: 6 }}>
-                    Usually about {typicalYield[source.material][o]}% ≈ {formatKg((input * typicalYield[source.material][o]) / 100)}
-                  </div>
                 </div>
               ))}
             </div>
 
             <div style={{ marginTop: 26 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontWeight: 800 }}>Balance check</span>
-                <span className="muted num">
-                  Output {formatKg(outTotal)} of {formatKg(input)} input · process loss {formatKg(Math.max(loss, 0))} · yield <b>{formatPercent(input ? (outTotal / input) * 100 : 0)}</b>
-                </span>
-              </div>
-              <div className="balance-bar">
-                {(['rubber', 'steel', 'other'] as OutputId[]).map((o) =>
-                  (out[o] ?? 0) > 0 ? (
-                    <div key={o} title={`${o}: ${formatKg(out[o] ?? 0)}`} style={{ width: `${((out[o] ?? 0) / Math.max(input, outTotal)) * 100}%`, background: seriesColors[o] }}>
-                      {(out[o] ?? 0) / Math.max(input, outTotal) > 0.08 && (o === 'rubber' ? 'Rubber' : o === 'steel' ? 'Steel' : 'Other')}
-                    </div>
-                  ) : null,
-                )}
-                {loss > 0 && (
-                  <div title={`Process loss: ${formatKg(loss)}`} style={{ width: `${(loss / input) * 100}%`, background: 'repeating-linear-gradient(45deg, #e3e6eb, #e3e6eb 6px, #eef0f3 6px, #eef0f3 12px)', color: '#5b6270' }}>
-                    {loss / input > 0.12 && `Process loss ${formatKg(loss)}`}
-                  </div>
-                )}
+              <div className="summary-line" style={{ fontSize: 15, background: '#f7f8fa', borderRadius: 12, padding: '14px 18px' }}>
+                <span style={{ fontWeight: 800 }}>Total output</span>
+                <span className="num strong">{formatKg(outTotal)}</span>
               </div>
               {overInput && (
                 <Alert
@@ -327,7 +300,6 @@ export default function NewProduction() {
                     ['Rubber', formatKg(out.rubber ?? 0)],
                     ['Steel', formatKg(out.steel ?? 0)],
                     ['Other', formatKg(out.other ?? 0)],
-                    ['Process loss', formatKg(Math.max(loss, 0))],
                   ] as [string, string][]
                 ).map(([k, v]) => (
                   <div className="summary-line" key={k}>
