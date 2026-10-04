@@ -20,7 +20,7 @@ export default function Login() {
   const navigate = useNavigate()
   const enter = (role: Role) => {
     login(role)
-    navigate('/')
+    navigate(role === 'ceo' ? '/welcome' : '/')
   }
 
   return (

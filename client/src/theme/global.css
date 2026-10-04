@@ -204,3 +204,16 @@ body {
 .ant-table .num, .id-link { white-space: nowrap; }
 .ant-table-thead > tr > th, .ant-table-tbody > tr > td, .ant-table-summary td { white-space: nowrap; }
 .ant-layout-sider { min-height: 100vh; }
+
+/* ---------- CEO welcome ---------- */
+.welcome { min-height: 100vh; background: var(--bg); }
+.welcome-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 40px; background: #fff; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+.welcome-body { max-width: 1280px; margin: 0 auto; padding: 36px 40px 56px; }
+.welcome-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; padding: 32px 36px; border-radius: 18px; color: #fff; background: radial-gradient(circle at 85% 0%, rgba(216,46,84,0.4) 0%, rgba(216,46,84,0) 45%), radial-gradient(circle at 20% 10%, #2c2c33 0%, #17171a 60%); }
+.welcome-hero .eyebrow { color: var(--brand); font-weight: 800; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+.welcome-hero h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+.welcome-hero p { color: rgba(255,255,255,0.68); font-size: 15.5px; line-height: 1.6; margin: 10px 0 0; max-width: 680px; }
+.welcome-section { margin-top: 36px; }
+.welcome-section-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.welcome-section-head h2 { font-size: 20px; font-weight: 800; margin: 0; color: var(--ink); letter-spacing: -0.01em; }
+.welcome-section-head p { color: var(--text-2); font-size: 14px; margin: 2px 0 0; }

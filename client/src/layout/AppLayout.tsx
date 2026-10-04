@@ -155,7 +155,7 @@ export default function AppLayout() {
         navigate('/login')
       } else {
         login(key as Role)
-        navigate('/')
+        navigate(key === 'ceo' ? '/welcome' : '/')
       }
     },
   }
