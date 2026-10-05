@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Segmented, Tooltip } from 'antd'
-import { AppstoreOutlined, BuildOutlined, InboxOutlined, LogoutOutlined } from '@ant-design/icons'
+import { Button } from 'antd'
+import { AppstoreOutlined, BuildOutlined, InboxOutlined, LogoutOutlined, RightOutlined } from '@ant-design/icons'
 import logo from '../assets/michy-logo.png'
 import { useApp } from '../context/AppContext'
-import { FactoryCard, WarehouseCard } from '../components/LocationCards'
 import { factories, warehouses } from '../data/seed'
-import { periodLabels, periodSubtitle, type Period } from '../data/selectors'
+import { factoryById, warehouseById } from '../data/selectors'
 
 const greeting = () => {
   const h = new Date().getHours()
@@ -28,9 +27,27 @@ function Section({ icon, tone, title, description, children }: { icon: ReactNode
   )
 }
 
+function SiteCard({ code, tone, name, detail, to }: { code: string; tone: 'wh' | 'fa'; name: string; detail: string; to: string }) {
+  const navigate = useNavigate()
+  return (
+    <div className="surface loc-card fade-in" onClick={() => navigate(to)} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div className={`loc-badge ${tone}`}>{code}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="strong" style={{ fontSize: 16 }}>
+          {name}
+        </div>
+        <div className="faint" style={{ fontSize: 13 }}>
+          {detail}
+        </div>
+      </div>
+      <RightOutlined className="faint" />
+    </div>
+  )
+}
+
 /** First screen the CEO sees after signing in: one card per site, each opening that site's detail page. */
 export default function CeoWelcome() {
-  const { user, logout, period, setPeriod } = useApp()
+  const { user, logout } = useApp()
   const navigate = useNavigate()
 
   return (
@@ -66,14 +83,6 @@ export default function CeoWelcome() {
               history. The menu on the left of that page takes you anywhere else in the app.
             </p>
           </div>
-          <Tooltip title={periodSubtitle(period)} placement="bottom">
-            <Segmented<Period>
-              size="large"
-              value={period}
-              onChange={setPeriod}
-              options={(['month', 'quarter', 'fy'] as Period[]).map((p) => ({ value: p, label: periodLabels[p] }))}
-            />
-          </Tooltip>
         </div>
 
         <Section
@@ -83,7 +92,7 @@ export default function CeoWelcome() {
           description="Raw tyre material bought from suppliers and held at each warehouse until it goes to a factory."
         >
           {warehouses.map((w) => (
-            <WarehouseCard key={w.id} id={w.id} />
+            <SiteCard key={w.id} code={w.code} tone="wh" name={w.name} to={`/warehouses/${w.id}`} detail={`${w.city} · supplies ${w.supplies.map((f) => factoryById(f).name).join(', ')}`} />
           ))}
         </Section>
 
@@ -94,7 +103,7 @@ export default function CeoWelcome() {
           description="What each factory processed and the rubber, steel and other output it has ready to sell."
         >
           {factories.map((f) => (
-            <FactoryCard key={f.id} id={f.id} period={period} />
+            <SiteCard key={f.id} code={f.code} tone="fa" name={f.name} to={`/factories/${f.id}`} detail={`${f.city} · gets material from ${f.suppliedBy.map((w) => warehouseById(w).name).join(', ')}`} />
           ))}
         </Section>
       </div>
